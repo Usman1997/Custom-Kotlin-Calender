@@ -5,6 +5,7 @@ import android.view.View
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.children
+import androidx.core.view.isVisible
 import com.example.customkotlincalender.utils.next
 import com.example.customkotlincalender.utils.previous
 import com.example.customkotlincalender.utils.yearMonth
@@ -18,8 +19,9 @@ import kotlinx.android.synthetic.main.example_1_calendar_day.view.*
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
-class MainActivity:AppCompatActivity() {
-    private val selectedDates = mutableSetOf<LocalDate>()
+
+class MainActivity : AppCompatActivity() {
+    private var selectedDate: LocalDate? = null
     private val today = LocalDate.now()
     private val monthTitleFormatter = DateTimeFormatter.ofPattern("MMMM")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -33,8 +35,6 @@ class MainActivity:AppCompatActivity() {
                 setTextColorRes(R.color.example_1_white_light)
             }
         }
-
-
         val currentMonth = YearMonth.now()
         val startMonth = currentMonth.minusMonths(10)
         val endMonth = currentMonth.plusMonths(10)
@@ -49,12 +49,13 @@ class MainActivity:AppCompatActivity() {
             init {
                 view.setOnClickListener {
                     if (day.owner == DayOwner.THIS_MONTH) {
-                        if (selectedDates.contains(day.date)) {
-                            selectedDates.remove(day.date)
-                        } else {
-                            selectedDates.add(day.date)
+                        if (selectedDate != day.date) {
+                            val oldDate = selectedDate
+                            selectedDate = day.date
+                            exOneCalendar.notifyDateChanged(day.date)
+                            oldDate?.let { exOneCalendar.notifyDateChanged(it) }
+                            // updateAdapterForDate(day.date)
                         }
-                        exOneCalendar.notifyDayChanged(day)
                     }
                 }
             }
@@ -67,15 +68,16 @@ class MainActivity:AppCompatActivity() {
                 val textView = container.textView
                 textView.text = day.date.dayOfMonth.toString()
                 if (day.owner == DayOwner.THIS_MONTH) {
-                    when {
-                        selectedDates.contains(day.date) -> {
-                            textView.setTextColorRes(R.color.example_1_bg)
-                            textView.setBackgroundResource(R.drawable.example_1_selected_bg)
-
-                        }
-                        today == day.date -> {
+                    textView.setTextColorRes(R.color.example_1_white)
+                    textView.background = null
+                    when (day.date) {
+                        today -> {
                             textView.setTextColorRes(R.color.example_1_white)
                             textView.setBackgroundResource(R.drawable.example_1_today_bg)
+                        }
+                        selectedDate -> {
+                            textView.setTextColorRes(R.color.example_1_bg)
+                            textView.setBackgroundResource(R.drawable.example_1_selected_bg)
                         }
                         else -> {
                             textView.setTextColorRes(R.color.example_1_white)
@@ -85,24 +87,20 @@ class MainActivity:AppCompatActivity() {
                 } else {
                     textView.setTextColorRes(R.color.example_1_white_light)
                     textView.background = null
+
                 }
             }
         }
 
-        exOneCalendar.monthScrollListener = {month->
+        exOneCalendar.monthScrollListener = { month ->
             val title = "${monthTitleFormatter.format(month.yearMonth)} ${month.yearMonth.year}"
             exFiveMonthYearText.text = title
-
-
         }
-
-
         exFiveNextMonthImage.setOnClickListener {
             exOneCalendar.findFirstVisibleMonth()?.let {
                 exOneCalendar.smoothScrollToMonth(it.yearMonth.next)
             }
         }
-
         exFivePreviousMonthImage.setOnClickListener {
             exOneCalendar.findFirstVisibleMonth()?.let {
                 exOneCalendar.smoothScrollToMonth(it.yearMonth.previous)
